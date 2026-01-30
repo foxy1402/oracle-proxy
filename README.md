@@ -611,7 +611,7 @@ sudo systemctl restart danted squid
 sudo dnf update -y
 
 # Update specific packages
-sudo dnf update squid dante-server iptables
+sudo dnf update squid dante iptables
 ```
 
 ---
