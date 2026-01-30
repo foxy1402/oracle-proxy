@@ -120,7 +120,7 @@ install_proxy_software() {
             log_error "Failed to install EPEL repository"
             exit 1
         }
-        dnf install -y dante-server || {
+        dnf install -y dante || {
             log_error "Failed to install Dante server"
             exit 1
         }
