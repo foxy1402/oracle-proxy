@@ -92,7 +92,7 @@ def validate_username(username):
         return False, "Username can only contain letters, numbers, and underscores"
     if username.lower() in ['root', 'daemon', 'bin', 'sys', 'sync', 'games', 'man', 'lp', 
                              'mail', 'news', 'uucp', 'proxy', 'www-data', 'backup', 'nobody',
-                             'squid', 'dante']:
+                             'squid', 'microsocks']:
         return False, "Username is reserved by the system"
     return True, ""
 
@@ -368,9 +368,9 @@ class ProxyDashboardHandler(BaseHTTPRequestHandler):
         status = {}
         
         try:
-            dante_check = subprocess.run(['systemctl', 'is-active', 'danted'],
+            microsocks_check = subprocess.run(['systemctl', 'is-active', 'microsocks'],
                                         capture_output=True, text=True)
-            status['socks5'] = dante_check.stdout.strip()
+            status['socks5'] = microsocks_check.stdout.strip()
         except:
             status['socks5'] = 'error'
         
@@ -425,27 +425,13 @@ class ProxyDashboardHandler(BaseHTTPRequestHandler):
             subprocess.run(['htpasswd', '-b', '/etc/squid/auth/passwords', username, password], 
                          check=True, capture_output=True)
             
-            # Add system user for dante (check if exists first)
-            user_exists = subprocess.run(['id', username], 
-                                       capture_output=True, stderr=subprocess.DEVNULL).returncode == 0
-            
-            if not user_exists:
-                subprocess.run(['useradd', '-r', '-s', '/bin/false', username], 
-                             check=True, capture_output=True)
-            
-            # Set password using stdin instead of shell command (more secure)
-            chpasswd = subprocess.Popen(['chpasswd'], stdin=subprocess.PIPE, 
-                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            chpasswd.communicate(f'{username}:{password}\n'.encode())
-            
-            if chpasswd.returncode != 0 and chpasswd.returncode is not None:
-                raise Exception("Failed to set system password")
+            # Note: microsocks uses username:password directly in service file
+            # No need to create system users for microsocks
             
             # Restart services
             subprocess.run(['systemctl', 'restart', 'squid'], check=True, capture_output=True)
-            subprocess.run(['systemctl', 'restart', 'danted'], check=True, capture_output=True)
             
-            return {'success': True, 'message': f'User {username} added successfully'}
+            return {'success': True, 'message': f'User {username} added to Squid. Note: SOCKS5 uses single user from setup.'}
         except subprocess.CalledProcessError as e:
             return {'success': False, 'error': f'Command failed: {e.stderr.decode() if e.stderr else str(e)}'}
         except Exception as e:
@@ -453,7 +439,7 @@ class ProxyDashboardHandler(BaseHTTPRequestHandler):
     
     def restart_services(self):
         try:
-            subprocess.run(['systemctl', 'restart', 'danted'], check=True)
+            subprocess.run(['systemctl', 'restart', 'microsocks'], check=True)
             subprocess.run(['systemctl', 'restart', 'squid'], check=True)
             return {'success': True, 'message': 'Services restarted successfully'}
         except Exception as e:
@@ -469,7 +455,7 @@ class ProxyDashboardHandler(BaseHTTPRequestHandler):
             fixes.append('Firewall rules added')
             
             # Restart services
-            subprocess.run(['systemctl', 'restart', 'danted'], check=True)
+            subprocess.run(['systemctl', 'restart', 'microsocks'], check=True)
             subprocess.run(['systemctl', 'restart', 'squid'], check=True)
             fixes.append('Services restarted')
             
@@ -528,10 +514,9 @@ ReadWritePaths=/opt/proxy-dashboard
 
 # Allow dashboard to manage proxy services (requires sudo setup)
 # Note: For full functionality, add to /etc/sudoers.d/proxy-dashboard:
-#   proxy-dashboard ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart danted
+#   proxy-dashboard ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart microsocks
 #   proxy-dashboard ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart squid
 #   proxy-dashboard ALL=(ALL) NOPASSWD: /usr/bin/htpasswd *
-#   proxy-dashboard ALL=(ALL) NOPASSWD: /usr/sbin/useradd *
 #   proxy-dashboard ALL=(ALL) NOPASSWD: /usr/sbin/chpasswd
 
 [Install]
@@ -542,14 +527,14 @@ EOF
 echo "Creating sudo rules for dashboard functionality..."
 cat > /etc/sudoers.d/proxy-dashboard <<EOF
 # Allow proxy-dashboard user to manage proxy services
-proxy-dashboard ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart danted
+proxy-dashboard ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart microsocks
 proxy-dashboard ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart squid
-proxy-dashboard ALL=(ALL) NOPASSWD: /usr/bin/systemctl status danted
+proxy-dashboard ALL=(ALL) NOPASSWD: /usr/bin/systemctl status microsocks
 proxy-dashboard ALL=(ALL) NOPASSWD: /usr/bin/systemctl status squid
-proxy-dashboard ALL=(ALL) NOPASSWD: /usr/bin/systemctl is-active danted
+proxy-dashboard ALL=(ALL) NOPASSWD: /usr/bin/systemctl is-active microsocks
 proxy-dashboard ALL=(ALL) NOPASSWD: /usr/bin/systemctl is-active squid
 proxy-dashboard ALL=(ALL) NOPASSWD: /usr/bin/htpasswd -b /etc/squid/auth/passwords *
-proxy-dashboard ALL=(ALL) NOPASSWD: /usr/sbin/useradd -r -s /bin/false *
+EOF
 proxy-dashboard ALL=(ALL) NOPASSWD: /usr/sbin/chpasswd
 proxy-dashboard ALL=(ALL) NOPASSWD: /usr/sbin/iptables *
 proxy-dashboard ALL=(ALL) NOPASSWD: /usr/bin/netstat *

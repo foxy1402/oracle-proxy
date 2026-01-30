@@ -58,9 +58,9 @@ warn_check() {
 
 # Core checks
 echo -e "${BLUE}═══ Service Status ═══${NC}"
-check "Dante (SOCKS5) installed" "command -v sockd" "sockd"
+check "Microsocks (SOCKS5) installed" "command -v microsocks" "microsocks"
 check "Squid (HTTP) installed" "command -v squid" "squid"
-check "Dante service running" "systemctl is-active danted" "active"
+check "Microsocks service running" "systemctl is-active microsocks" "active"
 check "Squid service running" "systemctl is-active squid" "active"
 
 echo ""
@@ -98,7 +98,7 @@ check "HTTP listening on 8888" "netstat -tulpn 2>/dev/null || ss -tulpn" ":8888"
 
 echo ""
 echo -e "${BLUE}═══ Configuration Files ═══${NC}"
-check "Dante config exists" "test -f /etc/danted.conf && echo exists" "exists"
+check "Microsocks service exists" "test -f /etc/systemd/system/microsocks.service && echo exists" "exists"
 check "Squid config exists" "test -f /etc/squid/squid.conf && echo exists" "exists"
 check "Proxy auth exists" "test -f /etc/squid/auth/passwords && echo exists" "exists"
 
@@ -152,7 +152,7 @@ fi
 
 echo ""
 echo -e "${BLUE}═══ Persistence Checks ═══${NC}"
-check "Dante auto-start enabled" "systemctl is-enabled danted" "enabled"
+check "Microsocks auto-start enabled" "systemctl is-enabled microsocks" "enabled"
 check "Squid auto-start enabled" "systemctl is-enabled squid" "enabled"
 
 if [ -f /etc/iptables/rules.v4 ]; then
@@ -232,8 +232,8 @@ else
     echo ""
     echo -e "${YELLOW}Recommended Actions:${NC}"
     
-    if ! systemctl is-active --quiet danted; then
-        echo "• Start SOCKS5: sudo systemctl start danted"
+    if ! systemctl is-active --quiet microsocks; then
+        echo "• Start SOCKS5: sudo systemctl start microsocks"
     fi
     
     if ! systemctl is-active --quiet squid; then
@@ -242,7 +242,7 @@ else
     
     echo "• Run auto-fix: sudo ./complete-fix.sh"
     echo "• Check logs:"
-    echo "    sudo journalctl -u danted -n 20"
+    echo "    sudo journalctl -u microsocks -n 20"
     echo "    sudo journalctl -u squid -n 20"
     echo ""
     
@@ -250,7 +250,7 @@ else
     echo ""
     
     echo "Service Status:"
-    systemctl status danted --no-pager -n 3 2>/dev/null || echo "  Dante not installed"
+    systemctl status microsocks --no-pager -n 3 2>/dev/null || echo "  Microsocks not installed"
     systemctl status squid --no-pager -n 3 2>/dev/null || echo "  Squid not installed"
     
     echo ""

@@ -96,11 +96,10 @@ else
     echo -e "${YELLOW}! firewalld not active${NC}"
 fi
 
-# Fix dante configuration permissions
-echo -e "${BLUE}[6/8]${NC} Fixing dante configuration..."
-if [ -f /etc/danted.conf ]; then
-    chmod 644 /etc/danted.conf
-    echo -e "${GREEN}✓ Dante config permissions fixed${NC}"
+# Fix microsocks configuration
+echo -e "${BLUE}[6/8]${NC} Checking microsocks configuration..."
+if [ -f /etc/systemd/system/microsocks.service ]; then
+    echo -e "${GREEN}✓ Microsocks service configured${NC}"
 fi
 
 # Fix squid configuration and cache
@@ -125,14 +124,14 @@ echo -e "${BLUE}[8/8]${NC} Restarting proxy services..."
 
 systemctl daemon-reload
 
-# Restart dante (SOCKS5)
-systemctl restart danted
+# Restart microsocks (SOCKS5)
+systemctl restart microsocks
 sleep 2
-if systemctl is-active --quiet danted; then
+if systemctl is-active --quiet microsocks; then
     echo -e "${GREEN}✓ SOCKS5 proxy restarted${NC}"
 else
     echo -e "${RED}✗ SOCKS5 failed to start${NC}"
-    journalctl -u danted -n 10 --no-pager
+    journalctl -u microsocks -n 10 --no-pager
 fi
 
 # Restart squid (HTTP)
@@ -154,7 +153,7 @@ echo ""
 
 # Check services
 echo -n "SOCKS5 Service: "
-if systemctl is-active --quiet danted; then
+if systemctl is-active --quiet microsocks; then
     echo -e "${GREEN}RUNNING${NC}"
 else
     echo -e "${RED}STOPPED${NC}"
