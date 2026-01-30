@@ -534,8 +534,6 @@ proxy-dashboard ALL=(ALL) NOPASSWD: /usr/bin/systemctl status squid
 proxy-dashboard ALL=(ALL) NOPASSWD: /usr/bin/systemctl is-active microsocks
 proxy-dashboard ALL=(ALL) NOPASSWD: /usr/bin/systemctl is-active squid
 proxy-dashboard ALL=(ALL) NOPASSWD: /usr/bin/htpasswd -b /etc/squid/auth/passwords *
-EOF
-proxy-dashboard ALL=(ALL) NOPASSWD: /usr/sbin/chpasswd
 proxy-dashboard ALL=(ALL) NOPASSWD: /usr/sbin/iptables *
 proxy-dashboard ALL=(ALL) NOPASSWD: /usr/bin/netstat *
 proxy-dashboard ALL=(ALL) NOPASSWD: /usr/bin/ss *
