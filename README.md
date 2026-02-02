@@ -32,7 +32,7 @@ curl --socks5 YOUR_IP:1080 --proxy-user USERNAME:PASSWORD https://ifconfig.me
 ## 🌟 Features
 
 ### Core Functionality
-- ✅ **SOCKS5 Proxy** (Dante) - Port 1080
+- ✅ **SOCKS5 Proxy** (microsocks) - Port 1080
 - ✅ **HTTP/HTTPS Proxy** (Squid) - Port 8888
 - ✅ **Web Dashboard** - Port 1234
 - ✅ **Authentication** - Username/password protection
@@ -67,7 +67,7 @@ curl --socks5 YOUR_IP:1080 --proxy-user USERNAME:PASSWORD https://ifconfig.me
 Setting up a proxy on Oracle Cloud is challenging because:
 - ❌ Oracle Cloud has strict firewall rules that block proxy ports by default
 - ❌ Standard proxy guides don't account for Oracle Linux specifics
-- ❌ Multiple services need to work together (dante, squid, iptables, firewalld)
+- ❌ Multiple services need to work together (microsocks, squid, iptables, firewalld)
 - ❌ Authentication setup is complex
 
 **This repository provides:**
@@ -147,7 +147,7 @@ sudo ./oracle-proxy-setup.sh
 3. Confirm Oracle Cloud Security List configuration
 
 **What gets installed:**
-- ✅ Dante SOCKS5 server (port 1080)
+- ✅ microsocks SOCKS5 server (port 1080)
 - ✅ Squid HTTP proxy (port 8888)
 - ✅ Authentication system
 - ✅ Firewall rules (iptables + firewalld)
@@ -235,12 +235,14 @@ curl -x http://YOUR_IP:8888 --proxy-user USERNAME:PASSWORD https://ifconfig.me
 
 **⚠️ Only install AFTER completing Steps 1-5 above!**
 
-The web dashboard lets you:
-- Monitor active connections in real-time
-- View proxy statistics
-- Add new users
-- Run diagnostics
-- Auto-fix issues
+The web dashboard provides a simple, secure interface to monitor and manage your proxy server:
+
+- 📊 **Real-Time Monitoring** - Service status, active connections, public IP
+- 🛠️ **Diagnostics** - Check firewall, ports, SELinux status
+- 🚫 **IP Blacklist** - Block unwanted IPs with one click
+- 🔄 **Service Control** - Restart services, run auto-fix
+- 🔐 **Secure Authentication** - Password-protected access with session management
+- 📱 **Mobile-Friendly** - Responsive design works on all devices
 
 ### Dashboard Installation
 
@@ -411,7 +413,7 @@ curl -x http://YOUR_IP:8888 --proxy-user USERNAME:PASSWORD https://ifconfig.me
 sudo ./complete-fix.sh
 
 # Check if services are running
-sudo systemctl status danted    # SOCKS5
+sudo systemctl status microsocks  # SOCKS5
 sudo systemctl status squid     # HTTP
 
 # Check if ports are open
@@ -444,7 +446,7 @@ sudo htpasswd -b /etc/squid/auth/passwords USERNAME PASSWORD
 echo "USERNAME:PASSWORD" | sudo chpasswd
 
 # Restart services
-sudo systemctl restart danted
+sudo systemctl restart microsocks
 sudo systemctl restart squid
 ```
 
@@ -491,11 +493,11 @@ free -h
 
 ```bash
 # Check service logs
-sudo journalctl -u danted -f
+sudo journalctl -u microsocks -f
 sudo tail -f /var/log/squid/access.log
 
 # Restart services
-sudo systemctl restart danted
+sudo systemctl restart microsocks
 sudo systemctl restart squid
 
 # Re-apply firewall rules
@@ -527,7 +529,7 @@ curl --socks5 YOUR_IP:1080 --proxy-user USERNAME:PASSWORD https://ifconfig.me
 # Change password regularly
 sudo htpasswd -b /etc/squid/auth/passwords USERNAME NEW_PASSWORD
 echo "USERNAME:NEW_PASSWORD" | sudo chpasswd
-sudo systemctl restart danted squid
+sudo systemctl restart microsocks squid
 ```
 
 ### 2. Limit Access by IP (Recommended)
@@ -536,17 +538,18 @@ sudo systemctl restart danted squid
 - Instead of `0.0.0.0/0`, use `YOUR_HOME_IP/32`
 - Find your IP: https://whatismyip.com
 
-**In dante config:**
+**For microsocks (SOCKS5):**
+microsocks doesn't support IP filtering in config - use iptables or Oracle Security List instead.
+
+**For Squid (HTTP):**
 ```bash
-sudo nano /etc/danted.conf
+sudo nano /etc/squid/squid.conf
 
-# Change this line:
-client pass {
-    from: YOUR_HOME_IP/32 to: 0.0.0.0/0
-    # ...
-}
+# Add before the http_access allow authenticated line:
+acl allowed_ips src YOUR_HOME_IP/32
+http_access allow allowed_ips authenticated
 
-sudo systemctl restart danted
+sudo systemctl restart squid
 ```
 
 ### 3. Monitor Access
@@ -559,7 +562,7 @@ sudo netstat -an | grep -E ":1080|:8888" | grep ESTABLISHED
 sudo tail -f /var/log/squid/access.log
 
 # View SOCKS5 logs
-sudo journalctl -u danted -f
+sudo journalctl -u microsocks -f
 ```
 
 ### 4. Use Non-Standard Ports (Advanced)
@@ -567,10 +570,14 @@ sudo journalctl -u danted -f
 Change from default ports to avoid port scanning:
 
 ```bash
-# Edit configurations
-sudo nano /etc/danted.conf
-# Change: internal: 0.0.0.0 port = 1080
-# To:     internal: 0.0.0.0 port = 45678
+# For Squid (HTTP), edit config
+sudo nano /etc/squid/squid.conf
+# Change: http_port 8888
+# To:     http_port 54321
+
+# For microsocks (SOCKS5), edit service file
+sudo systemctl edit --full microsocks
+# Change: ExecStart line port from 1080 to 45678
 
 sudo nano /etc/squid/squid.conf
 # Change: http_port 8888
@@ -581,7 +588,7 @@ sudo iptables -I INPUT -p tcp --dport 45678 -j ACCEPT
 sudo iptables -I INPUT -p tcp --dport 54321 -j ACCEPT
 
 # Restart
-sudo systemctl restart danted squid
+sudo systemctl restart microsocks squid
 ```
 
 **Don't forget:** Update Oracle Cloud Security List with new ports!
@@ -601,7 +608,7 @@ sudo useradd -r -s /bin/false newuser
 echo "newuser:newpassword" | sudo chpasswd
 
 # Restart services
-sudo systemctl restart danted squid
+sudo systemctl restart microsocks squid
 ```
 
 ### 6. Keep System Updated
@@ -611,7 +618,7 @@ sudo systemctl restart danted squid
 sudo dnf update -y
 
 # Update specific packages
-sudo dnf update squid dante iptables
+sudo dnf update squid microsocks iptables
 ```
 
 ---
@@ -632,16 +639,21 @@ dns_timeout 30 seconds
 sudo systemctl restart squid
 ```
 
-**For Dante:**
-```bash
-sudo nano /etc/danted.conf
+**For microsocks:**
 
-# Increase client limit
-client pass {
-    from: 0.0.0.0/0 to: 0.0.0.0/0
-    log: connect disconnect error
-    maxconnections: 1000
-}
+microsocks is already minimal and optimized. Connection limits are handled at the system level (ulimit). To increase:
+
+```bash
+# Edit service file
+sudo systemctl edit --full microsocks
+
+# Add under [Service] section:
+LimitNOFILE=4096
+
+# Restart
+sudo systemctl daemon-reload
+sudo systemctl restart microsocks
+```
 ```
 
 ### Enable Squid Caching (Speed up repeated requests)
@@ -664,7 +676,7 @@ sudo systemctl start squid
 ## 📁 File Locations Reference
 
 ```
-/etc/danted.conf                    # SOCKS5 server config
+/etc/squid/squid.conf             # HTTP proxy config
 /etc/squid/squid.conf              # HTTP proxy config
 /etc/squid/auth/passwords          # Proxy user credentials
 /etc/proxy-auth/credentials        # Saved installation credentials
@@ -694,9 +706,10 @@ Use SOCKS5 when possible for best performance.
 - Protects your Oracle instance from abuse
 - Helps track usage
 
-### Why Two Services (Dante + Squid)?
+### Why Two Services (microsocks + Squid)?
 
-- **Dante:** Best SOCKS5 implementation
+- **microsocks:** Lightweight, minimal SOCKS5 implementation with PAM auth
+- **Squid:** Mature HTTP proxy with caching and authentication
 - **Squid:** Industry-standard HTTP proxy with caching
 
 They work together to provide both protocols.
@@ -727,7 +740,7 @@ Both must allow traffic for proxy to work.
 
 3. **Check logs:**
    ```bash
-   sudo journalctl -u danted -n 50
+   sudo journalctl -u microsocks -n 50
    sudo tail -f /var/log/squid/access.log
    ```
 
@@ -770,7 +783,7 @@ A: Check Oracle's Terms of Service. Generally, commercial use requires paid acco
 df -h
 
 # Review logs
-sudo journalctl -u danted --since "1 week ago" | grep -i error
+sudo journalctl -u microsocks --since "1 week ago" | grep -i error
 sudo grep -i error /var/log/squid/cache.log
 ```
 
@@ -780,7 +793,7 @@ sudo grep -i error /var/log/squid/cache.log
 sudo dnf update -y
 
 # Restart services
-sudo systemctl restart danted squid
+sudo systemctl restart microsocks squid
 
 # Clean squid cache
 sudo systemctl stop squid
@@ -796,7 +809,7 @@ sudo logrotate -f /etc/logrotate.d/squid
 ```bash
 # Backup all configs
 sudo tar -czf proxy-backup-$(date +%Y%m%d).tar.gz \
-  /etc/danted.conf \
+  /etc/squid/squid.conf \
   /etc/squid/squid.conf \
   /etc/squid/auth/passwords \
   /etc/proxy-auth/credentials
@@ -811,10 +824,10 @@ scp opc@YOUR_IP:~/proxy-backup-*.tar.gz ./
 
 ```bash
 # Service management
-sudo systemctl start danted          # Start SOCKS5
-sudo systemctl stop danted           # Stop SOCKS5
-sudo systemctl restart danted        # Restart SOCKS5
-sudo systemctl status danted         # Check SOCKS5 status
+sudo systemctl start microsocks       # Start SOCKS5
+sudo systemctl stop microsocks        # Stop SOCKS5
+sudo systemctl restart microsocks     # Restart SOCKS5
+sudo systemctl status microsocks      # Check SOCKS5 status
 
 sudo systemctl start squid           # Start HTTP
 sudo systemctl stop squid            # Stop HTTP
@@ -828,18 +841,21 @@ sudo netstat -tulpn | grep -E "1080|8888"
 
 # View configs
 sudo cat /etc/proxy-configs/quick-reference.txt
-sudo cat /etc/danted.conf
+# View microsocks config (minimal - most auth via PAM)
+sudo systemctl cat microsocks
+
+# View Squid config
 sudo cat /etc/squid/squid.conf
 
 # Logs
-sudo journalctl -u danted -f
+sudo journalctl -u microsocks -f
 sudo tail -f /var/log/squid/access.log
 
 # Add user
 sudo htpasswd -b /etc/squid/auth/passwords USERNAME PASSWORD
 sudo useradd -r -s /bin/false USERNAME
 echo "USERNAME:PASSWORD" | sudo chpasswd
-sudo systemctl restart danted squid
+sudo systemctl restart microsocks squid
 
 # Test proxy
 curl --socks5 YOUR_IP:1080 --proxy-user USER:PASS https://ifconfig.me
@@ -852,7 +868,7 @@ curl -x http://YOUR_IP:8888 --proxy-user USER:PASS https://ifconfig.me
 
 - [ ] Scripts executed without errors
 - [ ] Oracle Cloud Security List configured (TCP 1080 and 8888)
-- [ ] Services running (`systemctl status danted squid`)
+- [ ] Services running (`systemctl status microsocks squid`)
 - [ ] Can connect with SOCKS5 client
 - [ ] Can connect with HTTP proxy
 - [ ] Authentication working
@@ -864,7 +880,7 @@ curl -x http://YOUR_IP:8888 --proxy-user USER:PASS https://ifconfig.me
 ## 🔗 Additional Resources
 
 - Oracle Cloud Networking Guide: https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/overview.htm
-- Dante Documentation: https://www.inet.no/dante/doc/
+- microsocks: https://github.com/rofl0r/microsocks
 - Squid Documentation: http://www.squid-cache.org/Doc/
 - SOCKS5 Protocol: https://tools.ietf.org/html/rfc1928
 
