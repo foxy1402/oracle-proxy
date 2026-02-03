@@ -57,7 +57,7 @@ def validate_username(username):
         return False, "Username can only contain letters, numbers, and underscores"
     if username.lower() in ['root', 'daemon', 'bin', 'sys', 'sync', 'games', 'man', 'lp',
                              'mail', 'news', 'uucp', 'proxy', 'www-data', 'backup', 'nobody',
-                             'squid', 'microsocks', 'danted']:
+                             'squid', 'microsocks']:
         return False, "Username is reserved by the system"
     return True, ""
 
@@ -451,23 +451,13 @@ class ProxyDashboardHandler(BaseHTTPRequestHandler):
     def get_proxy_status(self):
         status = {}
 
-        # Check for danted (SOCKS5), fallback to microsocks
-        socks_status = 'error'
+        # Check microsocks (SOCKS5)
         try:
-            danted_check = subprocess.run(['sudo', 'systemctl', 'is-active', 'danted'],
+            microsocks_check = subprocess.run(['sudo', 'systemctl', 'is-active', 'microsocks'],
                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-            danted_status = danted_check.stdout.strip()
-            if danted_status == 'active':
-                socks_status = 'active'
+            status['socks5'] = microsocks_check.stdout.strip()
         except Exception as e:
-            pass
-        
-        if socks_status != 'active':
-            try:
-                microsocks_check = subprocess.run(['sudo', 'systemctl', 'is-active', 'microsocks'],
-                                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-                socks_status = microsocks_check.stdout.strip()
-            except Exception as e:
+            status['socks5'] = 'error'
                 pass
         
         status['socks5'] = socks_status
@@ -534,12 +524,8 @@ class ProxyDashboardHandler(BaseHTTPRequestHandler):
 
     def restart_services(self):
         try:
-            # Try danted first, fallback to microsocks
-            try:
-                subprocess.run(['sudo', 'systemctl', 'restart', 'danted'], check=True)
-            except:
-                subprocess.run(['sudo', 'systemctl', 'restart', 'microsocks'], check=True)
-            
+            # Restart microsocks (SOCKS5)
+            subprocess.run(['sudo', 'systemctl', 'restart', 'microsocks'], check=True)
             subprocess.run(['sudo', 'systemctl', 'restart', 'squid'], check=True)
             return {'success': True, 'message': 'Services restarted successfully'}
         except Exception as e:
@@ -555,10 +541,7 @@ class ProxyDashboardHandler(BaseHTTPRequestHandler):
             fixes.append('Firewall rules added')
 
             # Restart services
-            try:
-                subprocess.run(['sudo', 'systemctl', 'restart', 'danted'], check=True)
-            except:
-                subprocess.run(['sudo', 'systemctl', 'restart', 'microsocks'], check=True)
+            subprocess.run(['sudo', 'systemctl', 'restart', 'microsocks'], check=True)
             subprocess.run(['sudo', 'systemctl', 'restart', 'squid'], check=True)
             fixes.append('Services restarted')
 

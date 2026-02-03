@@ -35,7 +35,7 @@ sudo ./ubuntu-proxy-setup.sh
 ## ✅ What's Included
 
 ### Oracle Linux 8
-- **SOCKS5**: Dante (port 1080) - PAM authentication
+- **SOCKS5**: microsocks (port 1080) - built from source
 - **HTTP**: Squid (port 8888) - htpasswd authentication
 - **Dashboard**: Python web interface (port 1234)
 - **Security**: SELinux compatible
@@ -90,8 +90,8 @@ Access at: `http://YOUR_IP:1234`
 
 **Oracle Linux:**
 ```bash
-sudo systemctl status danted    # SOCKS5
-sudo systemctl status squid     # HTTP
+sudo systemctl status microsocks  # SOCKS5
+sudo systemctl status squid       # HTTP
 ```
 
 **Ubuntu:**
@@ -104,7 +104,7 @@ sudo systemctl status squid       # HTTP
 
 **Oracle Linux:**
 ```bash
-sudo journalctl -u danted -f       # SOCKS5 logs
+sudo journalctl -u microsocks -f   # SOCKS5 logs
 sudo tail -f /var/log/squid/access.log  # HTTP logs
 ```
 
@@ -166,8 +166,8 @@ sudo iptables -L INPUT -n | grep -E "1080|8888"
 
 **Oracle Linux:**
 ```bash
-sudo journalctl -u danted -n 50    # SOCKS5 errors
-sudo journalctl -u squid -n 50     # HTTP errors
+sudo journalctl -u microsocks -n 50  # SOCKS5 errors
+sudo journalctl -u squid -n 50       # HTTP errors
 ```
 
 **Ubuntu:**
@@ -198,7 +198,7 @@ sudo systemctl restart squid
 ## 🔒 Security Notes
 
 ### Password Storage
-- ✅ **SOCKS5**: Hashed (Oracle: shadow file, Ubuntu: credentials file)
+- ✅ **SOCKS5**: Secure credentials file (both Oracle & Ubuntu)
 - ✅ **HTTP**: htpasswd bcrypt hash
 - ✅ **Dashboard**: PBKDF2-SHA256 (100k iterations)
 - ✅ **No plain text** passwords stored anywhere
@@ -217,7 +217,7 @@ sudo systemctl restart squid
 
 ### Oracle Linux
 ```
-/etc/danted.conf                    # SOCKS5 config
+/etc/microsocks/credentials         # SOCKS5 credentials
 /etc/squid/squid.conf               # HTTP config
 /etc/squid/auth/passwords           # User passwords
 /etc/proxy-configs/                 # Client guides
@@ -245,7 +245,6 @@ MIT License - Free to use and modify
 
 ## 🙏 Credits
 
-- **Dante**: https://www.inet.no/dante/
 - **microsocks**: https://github.com/rofl0r/microsocks
 - **Squid**: http://www.squid-cache.org/
 

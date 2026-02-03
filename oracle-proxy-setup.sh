@@ -191,7 +191,7 @@ validate_username() {
     fi
     
     # Check reserved names
-    if [[ "$username" =~ ^(root|daemon|bin|sys|sync|games|man|lp|mail|news|uucp|proxy|www-data|backup|list|irc|gnats|nobody|systemd|messagebus|sshd|squid|dante)$ ]]; then
+    if [[ "$username" =~ ^(root|daemon|bin|sys|sync|games|man|lp|mail|news|uucp|proxy|www-data|backup|list|irc|gnats|nobody|systemd|messagebus|sshd|squid|microsocks)$ ]]; then
         echo "Username '$username' is reserved by the system"
         return 1
     fi
@@ -268,7 +268,7 @@ EOF
 }
 
 ###############################################################################
-# Step 4: Configure SOCKS5 Proxy (Dante)
+# Step 4: Configure SOCKS5 Proxy (microsocks)
 ###############################################################################
 
 configure_socks5() {
@@ -749,7 +749,7 @@ run_diagnostics() {
     
     echo "Proxy Ports:"
     echo -n "  SOCKS5 ($SOCKS5_PORT): "
-    if systemctl is-active --quiet danted; then
+    if systemctl is-active --quiet microsocks; then
         echo -e "${GREEN}RUNNING${NC}"
     else
         echo -e "${RED}STOPPED${NC}"
@@ -794,7 +794,7 @@ verify_installation() {
     
     # Check services
     echo -n "  Checking SOCKS5 service... "
-    if systemctl is-active --quiet danted; then
+    if systemctl is-active --quiet microsocks; then
         echo -e "${GREEN}OK${NC}"
     else
         echo -e "${RED}FAILED${NC}"
